@@ -1,20 +1,20 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
 
-export const protect = async (req, res, next) => {
-  let token;
+const authenticateToken = (req, res, next) => {
+  // Get token from cookies or Authorization header
+  const token = req.cookies.authToken || req.headers.authorization?.split(' ')[1];
 
-  token = req.cookies.jwt; // Read JWT from cookie
+  if (!token) {
+    return res.status(401).json({ message: 'No authentication token provided' });
+  }
 
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.userId).select('-password');
-      next();
-    } catch (error) {
-      res.status(401).json({ message: 'Not authorized, token failed' });
-    }
-  } else {
-    res.status(401).json({ message: 'Not authorized, no token' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    req.userId = decoded.id;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
+
+export default authenticateToken;
